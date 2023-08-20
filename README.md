@@ -15,12 +15,10 @@ and one for business logic in YAML. You can find example configurations with
 comments in project tree. For example server and client may be started by commands:
 
 ```
-python fixsim-server --acceptor_config fixsim-server.conf.ini --config
-fixsim-server.conf.yaml
+python fixsim-server.py -ac fixsim-server.conf.ini -c fixsim-server.conf.yaml
 ```
 ```
-python fixsim-client --initiator_config fixsim-client.conf.ini --config
-fixsim-client.conf.yaml
+python fixsim-client -ic fixsim-client.conf.ini -c fixsim-client.conf.yaml
 ```
 
 FixSim depends on twisted but you can easily purge it from poject by replacing reactor infinite loop by differrent infinite loop in main thread and implementing something like twisted.internet.task.LoopingCall which is used for periodical sending snapshots and subscribing to instruments.

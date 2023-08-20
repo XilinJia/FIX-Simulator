@@ -6,12 +6,22 @@ from fixsim.server import create_acceptor
 
 
 def parse_options(arguments):
-    parser = argparse.ArgumentParser(description='Run FIX server simulator')
+    parser = argparse.ArgumentParser(description="Run FIX server simulator")
 
-    parser.add_argument('-ac', '--acceptor_config', type=str, required=True
-                        , help='Path to FIX config file')
-    parser.add_argument('-c', '--server_config', type=str, required=True
-                        , help='Path to FIX server config file')
+    parser.add_argument(
+        "-ac",
+        "--acceptor_config",
+        type=str,
+        required=True,
+        help="Path to FIX config file",
+    )
+    parser.add_argument(
+        "-c",
+        "--server_config",
+        type=str,
+        required=True,
+        help="Path to FIX server config file",
+    )
 
     result = parser.parse_args(arguments)
     return result

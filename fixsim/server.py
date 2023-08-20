@@ -5,14 +5,21 @@ import random
 import datetime
 from twisted.internet import task
 
-from sim import (FixSimError, float_range,
-                 FixSimApplication, create_fix_version,
-                 instance_safe_call, create_logger, IncrementID, load_yaml)
+from .sim import (
+    FixSimError,
+    float_range,
+    FixSimApplication,
+    create_fix_version,
+    instance_safe_call,
+    create_logger,
+    IncrementID,
+    load_yaml,
+)
 
 
 class Quote(object):
-    BID = '0'
-    ASK = '1'
+    BID = "0"
+    ASK = "1"
 
     def __init__(self, side, price, size):
         super(Quote, self).__init__()
@@ -161,24 +168,31 @@ class IDGenerator(object):
     def reqID(self):
         return self._reqID.generate()
 
+
 def create_acceptor(acceptor_config, simulation_config):
     def create_subscriptions(sources):
         subscriptions = Subscriptions()
 
         for source in sources:
-            variation = source.get('variation', None)
+            variation = source.get("variation", None)
             if variation:
-                step, limit = variation.get('step', 0), variation.get('limit', 0)
+                step, limit = variation.get("step", 0), variation.get("limit", 0)
             else:
                 step, limit = 0, 0
 
-            subscription = Subscription(source['symbol'], SnapshotGenerator(step, limit))
+            subscription = Subscription(
+                source["symbol"], SnapshotGenerator(step, limit)
+            )
 
-            for quote in source['bid']:
-                subscription.generator.addQuote(Quote(Quote.BID, quote['price'], quote['size']))
+            for quote in source["bid"]:
+                subscription.generator.addQuote(
+                    Quote(Quote.BID, quote["price"], quote["size"])
+                )
 
-            for quote in source['ask']:
-                subscription.generator.addQuote(Quote(Quote.ASK, quote['price'], quote['size']))
+            for quote in source["ask"]:
+                subscription.generator.addQuote(
+                    Quote(Quote.ASK, quote["price"], quote["size"])
+                )
 
             subscriptions.add(subscription)
         return subscriptions
@@ -190,12 +204,14 @@ def create_acceptor(acceptor_config, simulation_config):
     fix_version = create_fix_version(config)
 
     publish_interval = config.get("publish_interval", 1)
-    subscriptions = create_subscriptions(config['instruments'])
+    subscriptions = create_subscriptions(config["instruments"])
 
     logger = create_logger(config)
     rejectRate = config.get("reject_rate", 0)
 
-    application = Server(fix_version, logger, publish_interval, rejectRate, subscriptions)
+    application = Server(
+        fix_version, logger, publish_interval, rejectRate, subscriptions
+    )
     storeFactory = quickfix.FileStoreFactory(settings)
     logFactory = quickfix.ScreenLogFactory(settings)
     acceptor = quickfix.SocketAcceptor(application, storeFactory, settings, logFactory)
@@ -243,7 +259,10 @@ class Server(FixSimApplication):
         self.logger.info("FixServer: publishMarketData %s", self.subscriptions)
         for subscription in self.subscriptions:
             if not subscription.hasSessions():
-                self.logger.info("FixServer:No session subscribed, skip publish symbol %s", subscription.symbol)
+                self.logger.info(
+                    "FixServer:No session subscribed, skip publish symbol %s",
+                    subscription.symbol,
+                )
                 continue
 
             message = self.fixVersion.MarketDataSnapshotFullRefresh()
@@ -254,14 +273,16 @@ class Server(FixSimApplication):
 
             subscription.createOrderBook()
             for quote in subscription.orderbook:
-                self.logger.info('FixServer:add quote to fix message %s', str(quote))
+                self.logger.info("FixServer:add quote to fix message %s", str(quote))
 
                 group.setField(quickfix.MDEntryType(quote.side))
                 group.setField(quickfix.MDEntryPx(quote.price))
                 group.setField(quickfix.MDEntrySize(quote.size))
                 group.setField(quickfix.QuoteEntryID(quote.id))
                 group.setField(quickfix.Currency(subscription.currency))
-                group.setField(quickfix.QuoteCondition(quickfix.QuoteCondition_OPEN_ACTIVE))
+                group.setField(
+                    quickfix.QuoteCondition(quickfix.QuoteCondition_OPEN_ACTIVE)
+                )
                 message.addGroup(group)
 
             for sessionID in subscription:
@@ -282,7 +303,11 @@ class Server(FixSimApplication):
             relatedSym.getField(symbolFix)
             relatedSym.getField(product)
             if product.getValue() != quickfix.Product_CURRENCY:
-                self.sendMarketDataReject(requestID, " product.getValue() != quickfix.Product_CURRENCY:", sessionID)
+                self.sendMarketDataReject(
+                    requestID,
+                    " product.getValue() != quickfix.Product_CURRENCY:",
+                    sessionID,
+                )
                 return
 
             # bid
@@ -295,12 +320,14 @@ class Server(FixSimApplication):
             symbol = symbolFix.getValue()
             subscription = self.subscriptions.get(symbol)
             if subscription is None:
-                self.sendMarketDataReject(requestID, "Unknown symbol: %s" % str(symbol), sessionID)
+                self.sendMarketDataReject(
+                    requestID, "Unknown symbol: %s" % str(symbol), sessionID
+                )
                 return
 
             subscription.addSession(sessionID)
         except Exception as e:
-            print e,e.args
+            print(e, e.args)
             self.sendMarketDataReject(requestID, str(e), sessionID)
 
     @instance_safe_call
@@ -315,7 +342,7 @@ class Server(FixSimApplication):
 
     def getSettlementDate(self):
         tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-        return tomorrow.strftime('%Y%m%d')
+        return tomorrow.strftime("%Y%m%d")
 
     def onNewOrderSingle(self, message, beginString, sessionID):
         symbol = quickfix.Symbol()
@@ -341,14 +368,19 @@ class Server(FixSimApplication):
 
         executionReport = quickfix.Message()
         executionReport.getHeader().setField(beginString)
-        executionReport.getHeader().setField(quickfix.MsgType(quickfix.MsgType_ExecutionReport))
+        executionReport.getHeader().setField(
+            quickfix.MsgType(quickfix.MsgType_ExecutionReport)
+        )
         executionReport.setField(quickfix.OrderID(self.idGen.orderID()))
         executionReport.setField(quickfix.ExecID(self.idGen.execID()))
 
         try:
             reject_chance = random.choice(range(1, 101))
             if self.rejectRate > reject_chance:
-                raise FixSimError("Rejected by cruel destiny %s" % str((reject_chance, self.rejectRate)))
+                raise FixSimError(
+                    "Rejected by cruel destiny %s"
+                    % str((reject_chance, self.rejectRate))
+                )
 
             subscription = self.subscriptions.get(symbol.getValue())
             quote = subscription.orderbook.get(quoteID.getValue())
@@ -382,7 +414,7 @@ class Server(FixSimApplication):
 
         except Exception as e:
             self.logger.exception("FixServer:Close order error")
-            executionReport.setField(quickfix.SettlDate(''))
+            executionReport.setField(quickfix.SettlDate(""))
             executionReport.setField(currency)
 
             executionReport.setField(quickfix.OrdStatus(quickfix.OrdStatus_REJECTED))
@@ -403,9 +435,8 @@ class Server(FixSimApplication):
 
         self.sendToTarget(executionReport, sessionID)
 
-
     def dispatchFromApp(self, msgType, message, beginString, sessionID):
-        if msgType == 'D':
+        if msgType == "D":
             self.onNewOrderSingle(message, beginString, sessionID)
-        elif msgType == 'V':
+        elif msgType == "V":
             self.onMarketDataRequest(message, sessionID)

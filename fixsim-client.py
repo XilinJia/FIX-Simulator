@@ -6,12 +6,22 @@ from fixsim.client import create_initiator
 
 
 def parse_args(arguments):
-    parser = argparse.ArgumentParser(description='Run FIX client simulator')
+    parser = argparse.ArgumentParser(description="Run FIX client simulator")
 
-    parser.add_argument('-ic', '--initiator_config', type=str, required=True
-                        , help='Path to FIX config file')
-    parser.add_argument('-c', '--client_config', type=str, required=True
-                        , help='Path to FIX client config file')
+    parser.add_argument(
+        "-ic",
+        "--initiator_config",
+        type=str,
+        required=True,
+        help="Path to FIX config file",
+    )
+    parser.add_argument(
+        "-c",
+        "--client_config",
+        type=str,
+        required=True,
+        help="Path to FIX client config file",
+    )
 
     result = parser.parse_args(arguments)
     return result

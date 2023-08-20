@@ -1,13 +1,15 @@
-import quickfix
-import copy
-import uuid
 import random
-import datetime
-import yaml
+
+import quickfix
 from twisted.internet import task
 
-from sim import (FixSimError, FixSimApplication, create_fix_version,
-                 instance_safe_call, create_logger, IncrementID, load_yaml)
+from .sim import (
+    FixSimApplication,
+    create_fix_version,
+    create_logger,
+    IncrementID,
+    load_yaml,
+)
 
 
 class Subscription(object):
@@ -72,7 +74,7 @@ def create_initiator(initiator_config, simulation_config):
         result = Subscriptions()
 
         for instrument in instruments:
-            subscription = Subscription(instrument['symbol'])
+            subscription = Subscription(instrument["symbol"])
             result.add(subscription)
 
         return result
@@ -82,15 +84,19 @@ def create_initiator(initiator_config, simulation_config):
 
     fix_version = create_fix_version(config)
 
-    subscriptions = create_subscriptions(config['instruments'])
+    subscriptions = create_subscriptions(config["instruments"])
 
     logger = create_logger(config)
-    subscribe_interval = config.get('subscribe_interval', 1)
-    skip_snapshot_chance = config.get('skip_snapshot_chance', 0)
-    application = Client(fix_version, logger, skip_snapshot_chance, subscribe_interval, subscriptions)
+    subscribe_interval = config.get("subscribe_interval", 1)
+    skip_snapshot_chance = config.get("skip_snapshot_chance", 0)
+    application = Client(
+        fix_version, logger, skip_snapshot_chance, subscribe_interval, subscriptions
+    )
     storeFactory = quickfix.FileStoreFactory(settings)
     logFactory = quickfix.ScreenLogFactory(settings)
-    initiator = quickfix.SocketInitiator(application, storeFactory, settings, logFactory)
+    initiator = quickfix.SocketInitiator(
+        application, storeFactory, settings, logFactory
+    )
     return initiator
 
 
@@ -119,12 +125,16 @@ class Snapshot(object):
         self.ask.append(quote)
 
     def __repr__(self):
-        return "Snapshot %s\n    BID: %s\n    ASK: %s" % (self.symbol, self.bid, self.ask)
+        return "Snapshot %s\n    BID: %s\n    ASK: %s" % (
+            self.symbol,
+            self.bid,
+            self.ask,
+        )
 
 
 class Quote(object):
-    SELL = '2'
-    BUY = '1'
+    SELL = "2"
+    BUY = "1"
 
     def __init__(self):
         super(Quote, self).__init__()
@@ -136,13 +146,20 @@ class Quote(object):
         self.id = None
 
     def __repr__(self):
-        return "(%s %s %s, %s)" % (str(self.id), self.side, str(self.price), str(self.size))
+        return "(%s %s %s, %s)" % (
+            str(self.id),
+            self.side,
+            str(self.price),
+            str(self.size),
+        )
 
 
 class Client(FixSimApplication):
     MKD_TOKEN = "MKD"
 
-    def __init__(self, fixVersion, logger, skipSnapshotChance, subscribeInterval, subscriptions):
+    def __init__(
+        self, fixVersion, logger, skipSnapshotChance, subscribeInterval, subscriptions
+    ):
         super(Client, self).__init__(fixVersion, logger)
 
         self.skipSnapshotChance = skipSnapshotChance
@@ -191,14 +208,20 @@ class Client(FixSimApplication):
         for subscription in self.subscriptions:
             message = self.fixVersion.MarketDataRequest()
             message.setField(quickfix.MDReqID(self.idGen.reqID()))
-            message.setField(quickfix.SubscriptionRequestType(quickfix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES))
+            message.setField(
+                quickfix.SubscriptionRequestType(
+                    quickfix.SubscriptionRequestType_SNAPSHOT_PLUS_UPDATES
+                )
+            )
             message.setField(quickfix.MDUpdateType(quickfix.MDUpdateType_FULL_REFRESH))
             message.setField(quickfix.MarketDepth(0))
             message.setField(quickfix.MDReqID(self.idGen.reqID()))
 
             relatedSym = self.fixVersion.MarketDataRequest.NoRelatedSym()
             relatedSym.setField(quickfix.Product(quickfix.Product_CURRENCY))
-            relatedSym.setField(quickfix.SecurityType(quickfix.SecurityType_FOREIGN_EXCHANGE_CONTRACT))
+            relatedSym.setField(
+                quickfix.SecurityType(quickfix.SecurityType_FOREIGN_EXCHANGE_CONTRACT)
+            )
             relatedSym.setField(quickfix.Symbol(subscription.symbol))
             message.addGroup(relatedSym)
 
@@ -213,7 +236,10 @@ class Client(FixSimApplication):
     def onMarketDataSnapshotFullRefresh(self, message, sessionID):
         skip_chance = random.choice(range(1, 101))
         if self.skipSnapshotChance > skip_chance:
-            self.logger.info("FIXSIM-CLIENT onMarketDataSnapshotFullRefresh skip making trade with random choice %d", skip_chance)
+            self.logger.info(
+                "FIXSIM-CLIENT onMarketDataSnapshotFullRefresh skip making trade with random choice %d",
+                skip_chance,
+            )
             return
 
         fix_symbol = quickfix.Symbol()
@@ -264,8 +290,14 @@ class Client(FixSimApplication):
 
         self.logger.info("FIXSIM-CLIENT make order for quote %s", str(quote))
         order = self.fixVersion.NewOrderSingle()
-        order.setField(quickfix.HandlInst(quickfix.HandlInst_AUTOMATED_EXECUTION_ORDER_PUBLIC_BROKER_INTERVENTION_OK))
-        order.setField(quickfix.SecurityType(quickfix.SecurityType_FOREIGN_EXCHANGE_CONTRACT))
+        order.setField(
+            quickfix.HandlInst(
+                quickfix.HandlInst_AUTOMATED_EXECUTION_ORDER_PUBLIC_BROKER_INTERVENTION_OK
+            )
+        )
+        order.setField(
+            quickfix.SecurityType(quickfix.SecurityType_FOREIGN_EXCHANGE_CONTRACT)
+        )
 
         order.setField(quickfix.OrdType(quickfix.OrdType_PREVIOUSLY_QUOTED))
         order.setField(quickfix.ClOrdID(self.idGen.orderID()))
@@ -283,13 +315,11 @@ class Client(FixSimApplication):
         order.setField(quickfix.TimeInForce(quickfix.TimeInForce_IMMEDIATE_OR_CANCEL))
         self.sendToTarget(order, self.orderSession)
 
-
     def onExecutionReport(self, message, sessionID):
         self.logger.info("FIXSIM-CLIENT EXECUTION REPORT  %s", str(message))
 
     def dispatchFromApp(self, msgType, message, beginString, sessionID):
-        if msgType == '8':
+        if msgType == "8":
             self.onExecutionReport(message, sessionID)
-        elif msgType == 'W':
+        elif msgType == "W":
             self.onMarketDataSnapshotFullRefresh(message, sessionID)
-
