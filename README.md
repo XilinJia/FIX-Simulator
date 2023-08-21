@@ -18,7 +18,7 @@ comments in project tree. For example server and client may be started by comman
 python fixsim-server.py -ac fixsim-server.conf.ini -c fixsim-server.conf.yaml
 ```
 ```
-python fixsim-client -ic fixsim-client.conf.ini -c fixsim-client.conf.yaml
+python fixsim-client.py -ic fixsim-client.conf.ini -c fixsim-client.conf.yaml
 ```
 
 FIX-Simulator depends on twisted but you can easily purge it from poject by replacing reactor infinite loop by differrent infinite loop in main thread and implementing something like twisted.internet.task.LoopingCall which is used for periodical sending snapshots and subscribing to instruments.
